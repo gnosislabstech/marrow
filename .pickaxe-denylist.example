@@ -1,0 +1,13 @@
+# Private pickaxe denylist — copy to .pickaxe-denylist (gitignored) and fill in.
+# One term per line. Blank lines and lines starting with # are ignored.
+# These are the operator-specific strings that must NEVER reach a public artifact:
+# usernames, home-dir paths, secret-vault names, cloud project/account refs, and
+# any persona / family / client names. The pickaxe scans git history (diff content,
+# filenames, commit author/committer metadata) for each and fails the publish gate
+# on any hit. The built-in denylist only ships the generic op:// pattern.
+#
+# Example (synthetic — replace with your real terms in the gitignored copy):
+synthuser
+/home/synthuser
+Example-Vault
+synthproj0123456789

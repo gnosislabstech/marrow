@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# cb — convenience wrapper for the corpus-engine CLI.
+# Usage:
+#   ./cb search "query"
+#   ./cb answer "question"
+#   ./cb list [--since=ISO]
+#   ./cb get <session_id>
+#   ./cb replay <session_id> <turn> [--window=N]
+#   ./cb stats
+#
+# Symlink onto your $PATH to use from any directory:
+#   ln -s "$(pwd)/cb" ~/.local/bin/cb
+
+cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+exec ./run.sh scripts/cli.ts "$@"

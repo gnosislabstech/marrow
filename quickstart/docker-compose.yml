@@ -1,0 +1,44 @@
+# Local zero-key demo stack: pgvector + PostgREST.
+#
+# The engine talks to PostgREST exactly as it talks to Supabase (it's the same
+# REST surface), so this demo exercises the REAL retrieval path — the
+# hybrid_search_sessions RPC over a local corpus — with no external service and
+# no API key.
+#
+# Lifecycle:  npm run demo:up  →  npm run demo:seed  →  npm run demo
+# Teardown:   npm run demo:down   (-v drops the volume; the demo is disposable)
+services:
+  db:
+    image: pgvector/pgvector:pg16        # bundles pgvector >= 0.8 (halfvec needs >= 0.7)
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      # Create the PostgREST roles at first boot so rest can connect before seed runs.
+      - ./init-roles.sql:/docker-entrypoint-initdb.d/00-init-roles.sql:ro
+    ports:
+      - "127.0.0.1:54339:5432"          # localhost only — never expose the demo DB to the LAN
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: "postgres://authenticator:postgres@db:5432/postgres"
+      PGRST_DB_SCHEMAS: "public"
+      PGRST_DB_ANON_ROLE: "anon"
+      # Standard Supabase local-dev JWT secret — PUBLIC, for local demos only.
+      PGRST_JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long"
+    ports:
+      - "127.0.0.1:54330:3000"          # localhost only (point SUPABASE_URL here) — the demo
+                                        # JWT secret is the well-known public one, so anyone who
+                                        # can reach this port can mint a service_role token
+    # No healthcheck on rest: the authenticator role doesn't exist until
+    # `demo:seed` runs, so rest can't connect — `up --wait` would hang. The seed
+    # restarts rest once roles + schema exist; run-demo polls for readiness.

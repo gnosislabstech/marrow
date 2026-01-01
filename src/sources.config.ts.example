@@ -1,0 +1,35 @@
+// src/sources.config.ts.example — optional source-registry override.
+//
+// Copy to src/sources.config.ts (gitignored) to point the ingester at YOUR
+// corpus. If this file is absent, bootstrap.ts uses its built-in default (the
+// standard ~/.claude/projects Claude Code tree). When present, this SOURCES
+// array fully REPLACES the default.
+//
+// Each source object:
+//   label         unique name; select it with --source=<label>
+//   type          "cc-jsonl-tree"      recursive *.jsonl walk (Claude Code projects)
+//                 "cc-jsonl-flat"      flat dir of *.jsonl
+//                 "claude-web-export"  a Claude.ai conversations.json file
+//                 "chatgpt-export"     a ChatGPT conversations.json file
+//                 "telegram-export"    a dir of ChatExport_*/result.json
+//                 "memory-tree"        a dir of *.md notes → memory_chunks
+//   rootPath      absolute path (a directory, or a file for the export types)
+//   sourceMachine free-form label stored on every row from this source
+
+import { homedir } from "node:os";
+
+export const SOURCES = [
+  {
+    label: "claude-code",
+    type: "cc-jsonl-tree",
+    rootPath: `${homedir()}/.claude/projects`,
+    sourceMachine: "local",
+  },
+  // Example — also index a folder of markdown notes as searchable memory:
+  // {
+  //   label: "notes",
+  //   type: "memory-tree",
+  //   rootPath: `${homedir()}/notes`,
+  //   sourceMachine: "local",
+  // },
+];

@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  pickaxe:
+    # Publish gate — fails the build on any identity/secret pattern in the repo
+    # history (content + filenames + commit metadata). The veto.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the scan
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: node --import tsx scripts/pickaxe.ts .
+
+  secret-scan:
+    # Generic secret scanner — complements the pickaxe by catching key shapes the
+    # denylist doesn't enumerate. Runs the gitleaks CLI directly: the binary is
+    # MIT/free everywhere, while gitleaks-action@v2 demands a paid license key
+    # under a GitHub organization (it failed the org repo's first CI run).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks (full history)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+          echo "9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks git --redact --no-banner --exit-code 1 .
+
+  quickstart:
+    # Definition of done: clone -> docker up -> seed -> demo returns cited results,
+    # with no external API key. Exercises the real retrieval path end-to-end.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run demo:up
+      - run: npm run demo:seed
+      - run: npm run demo
+      - if: always()
+        run: npm run demo:down

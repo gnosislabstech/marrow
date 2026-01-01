@@ -1,0 +1,20 @@
+// src/scrub.config.ts.example — operator identity/topology terms for the scrubber.
+//
+// Copy to `src/scrub.config.ts` (gitignored) and fill in YOUR real values. The
+// public tree ships ONLY this synthetic example — the engine never hardcodes a
+// real username, project ref, or name. identityScrub() (src/scrub.ts) takes these
+// terms as a parameter; the ingest chokepoint loads this file and passes them in.
+//
+// Leave any list empty to scrub nothing of that kind. op:// secret refs are
+// always scrubbed by the built-in generic rule regardless of what's here.
+
+import type { ScrubTerms } from "./scrub.js";
+
+export const SCRUB_TERMS: ScrubTerms = {
+  // Home-dir usernames: `/home/<user>` → $HOME, bare `<user>` token → <user>.
+  usernames: ["synthuser"],
+  // Supabase project refs (20-char) or any opaque infra id → <project-ref>.
+  projectRefs: ["synthprojref0000000a"],
+  // Persona / family / client names → <name>.
+  names: [],
+};

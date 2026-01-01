@@ -1,0 +1,38 @@
+{
+  "name": "marrow",
+  "version": "0.1.0",
+  "description": "Marrow: self-hosted semantic + lexical search over your AI coding sessions and notes. Every answer cites its source; your corpus never leaves your infrastructure. MCP-native.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "bootstrap": "./run.sh scripts/bootstrap.ts",
+    "bootstrap:dry": "./run.sh scripts/bootstrap.ts --dry-run",
+    "typecheck": "tsc --noEmit",
+    "mcp": "./run.sh scripts/mcp-server.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "demo:up": "docker compose -f quickstart/docker-compose.yml up -d --wait",
+    "demo:prep": "./run.sh quickstart/prep-embeddings.ts",
+    "demo:seed": "node --import tsx quickstart/seed.ts",
+    "demo": "node --import tsx quickstart/run-demo.ts",
+    "demo:down": "docker compose -f quickstart/docker-compose.yml down -v",
+    "export:public": "node --import tsx scripts/export-public.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "author": "Gnosis Labs (https://gnosislabs.tech)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gnosislabstech/marrow.git"
+  },
+  "homepage": "https://gnosislabs.tech"
+}

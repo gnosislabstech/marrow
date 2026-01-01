@@ -1,0 +1,50 @@
+{
+  "_comment": "Synthetic demo corpus — fully fabricated, no real identity or content. Four short sessions with distinct themes so semantic + lexical retrieval are both demonstrable. Owner is the neutral default 'owner'.",
+  "owner": "owner",
+  "sessions": [
+    {
+      "session_id": "demo-flaky-test",
+      "summary": "Tracking down a flaky integration test",
+      "started_at": "2026-01-04T09:12:00Z",
+      "chunks": [
+        { "turn_index": 0, "role": "user", "occurred_at": "2026-01-04T09:12:00Z", "content": "Our checkout integration test passes locally but fails about one run in five on CI. How do I find what makes it flaky?" },
+        { "turn_index": 1, "role": "assistant", "occurred_at": "2026-01-04T09:12:40Z", "content": "Flaky tests usually come from shared state, timing, or ordering. Run the suite with a fixed seed and the same worker count CI uses, then bisect: disable parallelism and see if the failure disappears. If it does, the test is leaking state between workers." },
+        { "turn_index": 2, "role": "user", "occurred_at": "2026-01-04T09:15:10Z", "content": "It only fails under parallelism. The test reuses a global database connection that other tests reset." },
+        { "turn_index": 3, "role": "assistant", "occurred_at": "2026-01-04T09:15:55Z", "content": "That's the leak. Give each worker its own connection and transaction, and roll back in teardown so no worker observes another's writes. Isolation removes the timing dependency that made it flaky." }
+      ]
+    },
+    {
+      "session_id": "demo-rate-limiter",
+      "summary": "Designing a token-bucket rate limiter",
+      "started_at": "2026-01-07T14:03:00Z",
+      "chunks": [
+        { "turn_index": 0, "role": "user", "occurred_at": "2026-01-07T14:03:00Z", "content": "I need to cap each API client to 100 requests per minute, bursty traffic allowed. What algorithm should I use?" },
+        { "turn_index": 1, "role": "assistant", "occurred_at": "2026-01-07T14:03:50Z", "content": "A token bucket fits: refill 100 tokens per minute, allow a burst up to the bucket size, reject when empty. Store the token count and last-refill timestamp per client in Redis so it works across instances." },
+        { "turn_index": 2, "role": "user", "occurred_at": "2026-01-07T14:06:20Z", "content": "How do I avoid a race when two requests refill the bucket at the same time?" },
+        { "turn_index": 3, "role": "assistant", "occurred_at": "2026-01-07T14:07:05Z", "content": "Do the refill-and-consume in one atomic step — a small Lua script in Redis, or a single Redis transaction. That way the read, refill, and decrement can't interleave across concurrent requests." }
+      ]
+    },
+    {
+      "session_id": "demo-slow-query",
+      "summary": "Speeding up a slow Postgres query",
+      "started_at": "2026-01-11T11:20:00Z",
+      "chunks": [
+        { "turn_index": 0, "role": "user", "occurred_at": "2026-01-11T11:20:00Z", "content": "A dashboard query over our orders table takes eight seconds. How do I figure out why it's slow?" },
+        { "turn_index": 1, "role": "assistant", "occurred_at": "2026-01-11T11:20:45Z", "content": "Run EXPLAIN ANALYZE on it. Look for a sequential scan over a large table or an external-merge sort spilling to disk — those are the usual culprits for a multi-second query." },
+        { "turn_index": 2, "role": "user", "occurred_at": "2026-01-11T11:23:30Z", "content": "It's a seq scan filtering by customer_id and ordering by created_at." },
+        { "turn_index": 3, "role": "assistant", "occurred_at": "2026-01-11T11:24:15Z", "content": "Add a composite index on (customer_id, created_at). The planner can then use the index for both the filter and the ordering, turning the seq scan into an index scan and dropping the query to milliseconds." }
+      ]
+    },
+    {
+      "session_id": "demo-ci-pipeline",
+      "summary": "Setting up a CI pipeline with caching",
+      "started_at": "2026-01-15T16:40:00Z",
+      "chunks": [
+        { "turn_index": 0, "role": "user", "occurred_at": "2026-01-15T16:40:00Z", "content": "Our CI takes twelve minutes, mostly reinstalling dependencies every run. How do I make it faster?" },
+        { "turn_index": 1, "role": "assistant", "occurred_at": "2026-01-15T16:40:50Z", "content": "Cache the dependency directory keyed on the lockfile hash. When the lockfile is unchanged the cache restores instead of reinstalling, which usually cuts several minutes off the build." },
+        { "turn_index": 2, "role": "user", "occurred_at": "2026-01-15T16:43:10Z", "content": "Should I also run the test and lint jobs in parallel?" },
+        { "turn_index": 3, "role": "assistant", "occurred_at": "2026-01-15T16:43:55Z", "content": "Yes — split independent jobs so lint, unit tests, and type-checking run concurrently rather than in sequence. Total wall-clock then tracks the slowest single job instead of their sum." }
+      ]
+    }
+  ]
+}

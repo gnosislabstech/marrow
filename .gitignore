@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.tmpl
+# Note: .env.tmpl is committed — it holds op:// references, not secrets.
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Local artifacts
+ingest-checkpoint.json
+.DS_Store
+.vscode/
+.idea/
+
+# Private pickaxe denylist (persona/family/client names + project refs) — NEVER commit.
+# The .example template IS committed; the real .pickaxe-denylist is not.
+.pickaxe-denylist
+!.pickaxe-denylist.example
+
+# Private scrubber terms (operator usernames/refs/names) — NEVER commit.
+# The .example template IS committed; the real scrub.config.ts is not.
+src/scrub.config.ts
+!src/scrub.config.ts.example
+
+# Private source registry (operator corpus paths) — NEVER commit.
+# The .example template IS committed; the real sources.config.ts is not.
+src/sources.config.ts
+!src/sources.config.ts.example
