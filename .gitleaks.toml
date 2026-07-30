@@ -1,0 +1,34 @@
+# .gitleaks.toml — exempt the repo's own synthetic test needles, and nothing else.
+#
+# Why this file exists: tests/p01-quarantine-fingerprint.test.ts and
+# tests/p11-privacy-patterns.test.ts deliberately plant fake credentials. That is
+# the point of those tests: they prove the privacy pre-scan catches real secret
+# shapes. Each line is annotated `// gitleaks:allow`.
+#
+# `gitleaks detect --no-git` honors those inline comments. `gitleaks git`
+# (full history, what CI runs) does not — it never populates the source line, so
+# a line-scoped allowlist cannot match. The CI-pinned version (8.24.3) happened
+# not to flag these; 8.30.1 flags all five. So the day anyone bumps that pin, CI
+# breaks on its own fixtures. This config closes the gap for every version.
+#
+# Deliberately VALUE-scoped, not path-scoped: exempting tests/ wholesale would
+# blind the scanner to a genuine credential committed there, and marrow's other
+# secret gate (scripts/pickaxe.ts) only scans identity/topology terms, not
+# credential shapes, so nothing would backstop it. Scoped this way, a real secret
+# in these same files still fails the build.
+#
+# Every value below is either a vendor-published documentation example or an
+# obvious dummy, and all of them are already public in this repo's test files.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic credential needles planted by the privacy tests"
+regexes = [
+  '''sup3rSecretPassw0rd''',
+  '''b3BlbnNzaC1rZXktdjEAAAAA''',
+  '''gho_16C7e42F292c6912E7710c838347Ae178B4a''',
+  '''sk_live_4eC39HqLyjWDarjtT1zdp7dc''',
+  '''xoxb-17653672481-19874698323-pdFZKHtTuE3sbYCfoO1yBPvt''',
+]
