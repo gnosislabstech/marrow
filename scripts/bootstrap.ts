@@ -345,27 +345,9 @@ async function ingestSession(
   stats.windowsTotal = windows.length;
   if (windows.length === 0) return stats;
 
-  // Scan every window once, up front: the CR document context below is built
-  // ONLY from windows that pass the privacy pre-scan, so quarantined
-  // (secret-bearing) content never reaches the CR provider either.
-  const scanned: ScannedWindow[] = windows.map((w) => ({
-    window: w,
-    hash: contentHash(w.text),
-    verdict: privacyPreScan(w.text),
-  }));
-  const documentText = truncateDocumentForContext(
-    scanned.filter((x) => x.verdict.pass).map((x) => x.window.text).join("\n\n"),
-  );
-
-  let existingHashes = new Set<string>();
-  if (!args.dryRun) {
-    existingHashes = await getExistingHashes(
-      env, "session_chunks", scanned.map((x) => x.hash), "session_id",
-    );
-  }
-  const newWindows = scanned.filter(
-    (x) => !existingHashes.has(`${sessionId} ${x.hash}`),
-  );
+  const { documentText, newWindows } = await scanAndDedupeWindows({
+    windows, sessionKey: sessionId, env, dryRun: args.dryRun,
+  });
   stats.windowsNew = newWindows.length;
   if (newWindows.length === 0) return stats;
 
@@ -406,6 +388,46 @@ interface ScannedWindow {
   window: TurnWindow;
   hash: string;
   verdict: PrivacyVerdict;
+}
+
+/**
+ * Scan a session's windows, build its CR document context, and drop the
+ * windows already ingested. Every source path (Claude Code, Claude web,
+ * ChatGPT, Telegram) needs exactly this sequence.
+ *
+ * It lives in one place on purpose. The privacy pre-scan MUST behave
+ * identically for every source, and this logic previously existed as four
+ * copy-pasted copies: a fix applied to one would have left the other three
+ * quarantining nothing, which is the failure mode the scan exists to prevent.
+ */
+async function scanAndDedupeWindows(args: {
+  windows: TurnWindow[];
+  sessionKey: string;
+  env: Env;
+  dryRun: boolean;
+}): Promise<{ documentText: string; newWindows: ScannedWindow[] }> {
+  // The CR document context is built ONLY from windows that pass the privacy
+  // pre-scan, so quarantined (secret-bearing) content never reaches the CR
+  // provider either.
+  const scanned: ScannedWindow[] = args.windows.map((w) => ({
+    window: w,
+    hash: contentHash(w.text),
+    verdict: privacyPreScan(w.text),
+  }));
+  const documentText = truncateDocumentForContext(
+    scanned.filter((x) => x.verdict.pass).map((x) => x.window.text).join("\n\n"),
+  );
+
+  let existingHashes = new Set<string>();
+  if (!args.dryRun) {
+    existingHashes = await getExistingHashes(
+      args.env, "session_chunks", scanned.map((x) => x.hash), "session_id",
+    );
+  }
+  const newWindows = scanned.filter(
+    (x) => !existingHashes.has(`${args.sessionKey} ${x.hash}`),
+  );
+  return { documentText, newWindows };
 }
 
 async function persistChunkBatches(
@@ -851,27 +873,9 @@ async function ingestClaudeWebExport(
         continue;
       }
 
-      // Scan every window once, up front: the CR document context is built
-      // ONLY from windows that pass the privacy pre-scan, so quarantined
-      // content never reaches the CR provider either.
-      const scanned: ScannedWindow[] = windows.map((w) => ({
-        window: w,
-        hash: contentHash(w.text),
-        verdict: privacyPreScan(w.text),
-      }));
-      const documentText = truncateDocumentForContext(
-        scanned.filter((x) => x.verdict.pass).map((x) => x.window.text).join("\n\n"),
-      );
-
-      let existingHashes = new Set<string>();
-      if (!args.dryRun) {
-        existingHashes = await getExistingHashes(
-          env, "session_chunks", scanned.map((x) => x.hash), "session_id",
-        );
-      }
-      const newWindows = scanned.filter(
-        (x) => !existingHashes.has(`${conv.uuid} ${x.hash}`),
-      );
+      const { documentText, newWindows } = await scanAndDedupeWindows({
+        windows, sessionKey: conv.uuid, env, dryRun: args.dryRun,
+      });
       totals.windowsNew += newWindows.length;
       if (newWindows.length === 0) {
         convsDone++;
@@ -1091,27 +1095,9 @@ async function ingestChatGptExport(
         continue;
       }
 
-      // Scan every window once, up front: the CR document context is built
-      // ONLY from windows that pass the privacy pre-scan, so quarantined
-      // content never reaches the CR provider either.
-      const scanned: ScannedWindow[] = windows.map((w) => ({
-        window: w,
-        hash: contentHash(w.text),
-        verdict: privacyPreScan(w.text),
-      }));
-      const documentText = truncateDocumentForContext(
-        scanned.filter((x) => x.verdict.pass).map((x) => x.window.text).join("\n\n"),
-      );
-
-      let existingHashes = new Set<string>();
-      if (!args.dryRun) {
-        existingHashes = await getExistingHashes(
-          env, "session_chunks", scanned.map((x) => x.hash), "session_id",
-        );
-      }
-      const newWindows = scanned.filter(
-        (x) => !existingHashes.has(`${sessionId} ${x.hash}`),
-      );
+      const { documentText, newWindows } = await scanAndDedupeWindows({
+        windows, sessionKey: sessionId, env, dryRun: args.dryRun,
+      });
       totals.windowsNew += newWindows.length;
       if (newWindows.length === 0) {
         convsDone++;
@@ -1284,27 +1270,9 @@ async function ingestTelegramExport(
         continue;
       }
 
-      // Scan every window once, up front: the CR document context is built
-      // ONLY from windows that pass the privacy pre-scan, so quarantined
-      // content never reaches the CR provider either.
-      const scanned: ScannedWindow[] = windows.map((w) => ({
-        window: w,
-        hash: contentHash(w.text),
-        verdict: privacyPreScan(w.text),
-      }));
-      const documentText = truncateDocumentForContext(
-        scanned.filter((x) => x.verdict.pass).map((x) => x.window.text).join("\n\n"),
-      );
-
-      let existingHashes = new Set<string>();
-      if (!args.dryRun) {
-        existingHashes = await getExistingHashes(
-          env, "session_chunks", scanned.map((x) => x.hash), "session_id",
-        );
-      }
-      const newWindows = scanned.filter(
-        (x) => !existingHashes.has(`${sessionId} ${x.hash}`),
-      );
+      const { documentText, newWindows } = await scanAndDedupeWindows({
+        windows, sessionKey: sessionId, env, dryRun: args.dryRun,
+      });
       totals.windowsNew += newWindows.length;
       if (newWindows.length === 0) {
         done++;
